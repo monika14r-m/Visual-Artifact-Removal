@@ -1,15 +1,23 @@
 import cv2
 import numpy as np
 
-def remove_watermark(img):
+def remove_watermark(image_path, output_path, mask=None):
     """
-    Basic watermark removal using inpainting.
-    Currently uses a blank mask as placeholder.
-    Replace mask generation with actual watermark detection later.
+    Removes watermark from an image using inpainting.
+    :param image_path: Path to input image
+    :param output_path: Path to save output image
+    :param mask: Optional binary mask (same size as image) where watermark is marked
     """
-    # Create an empty mask (same size as image, single channel)
-    mask = np.zeros(img.shape[:2], dtype=np.uint8)
+    image = cv2.imread(image_path)
+    if image is None:
+        raise ValueError("Could not load image")
 
-    # Inpaint using TELEA algorithm
-    result = cv2.inpaint(img, mask, 3, cv2.INPAINT_TELEA)
-    return result
+    if mask is None:
+        # Simple heuristic: assume watermark is bright text in bottom-right corner
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        h, w = image.shape[:2]
+        mask[h-80:h-20, w-200:w-20] = 255
+
+    result = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
+    cv2.imwrite(output_path, result)
+    return output_path
