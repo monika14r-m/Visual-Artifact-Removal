@@ -1,2 +1,2 @@
 # RMK
-removing annoying watermarks from images , codes 
+Image restoration and artifact removal utilities for visual enhancement workflows.
