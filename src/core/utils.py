@@ -1,35 +1,64 @@
+# tests/test_utils.py
+
 import os
-import cv2
+import numpy as np
+import pytest
+
+from src.core.utils import (
+    is_image_file,
+    list_images,
+    resize_image
+)
 
 
-def is_image_file(filename, supported_formats):
-    return filename.lower().endswith(supported_formats)
+def test_is_image_file_valid():
+    assert is_image_file(
+        "photo.jpg",
+        (".jpg", ".jpeg", ".png")
+    )
 
 
-def load_image(path):
-    image = cv2.imread(path)
-    if image is None:
-        raise ValueError(f"Failed to load image: {path}")
-    return image
+def test_is_image_file_invalid():
+    assert not is_image_file(
+        "document.txt",
+        (".jpg", ".jpeg", ".png")
+    )
 
 
-def save_image(path, image):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    cv2.imwrite(path, image)
+def test_list_images_returns_only_images(tmp_path):
+    (tmp_path / "image1.jpg").touch()
+    (tmp_path / "image2.png").touch()
+    (tmp_path / "notes.txt").touch()
+
+    images = list_images(
+        str(tmp_path),
+        (".jpg", ".jpeg", ".png")
+    )
+
+    assert len(images) == 2
 
 
-def list_images(folder, supported_formats):
-    if not os.path.exists(folder):
-        raise FileNotFoundError(f"Folder not found: {folder}")
-
-    return [
-        f for f in os.listdir(folder)
-        if is_image_file(f, supported_formats)
-    ]
+def test_list_images_folder_not_found():
+    with pytest.raises(FileNotFoundError):
+        list_images(
+            "nonexistent_folder",
+            (".jpg", ".jpeg", ".png")
+        )
 
 
-def resize_image(image, width):
-    h, w = image.shape[:2]
-    ratio = width / float(w)
-    new_dim = (width, int(h * ratio))
-    return cv2.resize(image, new_dim)
+def test_resize_image_changes_width():
+    image = np.zeros((100, 200, 3), dtype=np.uint8)
+
+    resized = resize_image(image, 100)
+
+    assert resized.shape[1] == 100
+
+
+def test_resize_image_preserves_aspect_ratio():
+    image = np.zeros((100, 200, 3), dtype=np.uint8)
+
+    resized = resize_image(image, 100)
+
+    expected_height = 50
+
+    assert resized.shape[0] == expected_height
