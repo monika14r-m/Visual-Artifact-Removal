@@ -1,63 +1,172 @@
-Visual Artifact Removal
+# Visual Artifact Removal
 
-A Python toolkit for restoring degraded images — removing watermarks, compression artifacts, and visual defects using classical computer vision and inpainting techniques.
+A Python-based image restoration toolkit for removing watermarks, reducing compression artifacts, and repairing minor visual defects using OpenCV and classical computer vision techniques.
 
-Overview
-Visual Artifact Removal is a lightweight, extensible image restoration pipeline built on OpenCV. It is designed for researchers, developers, and hobbyists who need a reproducible, scriptable way to clean up images — without reaching for a heavy deep-learning stack.
-The toolkit handles the three most common classes of visual degradation:
-Artifact TypeMethod UsedWatermarksMask detection + inpaintingCompression artifactsBilateral filteringMinor defectsMorphological restoration
-Project Structure
+---
+
+## Overview
+
+Visual Artifact Removal is a lightweight image-processing project that demonstrates practical applications of image restoration techniques using OpenCV.
+
+The toolkit provides a modular pipeline for detecting and repairing common visual artifacts while remaining easy to understand, extend, and integrate into larger computer vision workflows.
+
+### Supported Operations
+
+| Artifact              | Technique                 |
+| --------------------- | ------------------------- |
+| Watermarks            | Mask-based inpainting     |
+| Compression Artifacts | Bilateral filtering       |
+| Minor Defects         | Morphological restoration |
+
+---
+
+## Key Features
+
+* Watermark removal using OpenCV inpainting
+* Compression artifact reduction
+* Morphological image restoration
+* Batch image processing support
+* Modular and extensible architecture
+* Automated testing with PyTest
+* Simple Python API and CLI usage
+
+---
+
+## Project Structure
+
+```text
 Visual-Artifact-Removal/
 ├── src/
-│   ├── remove_watermark.py     # Core watermark removal pipeline
-│   ├── artifact_filter.py      # Compression artifact reduction
-│   └── utils.py                # Shared preprocessing utilities
+│   ├── remove_watermark.py
+│   ├── artifact_filter.py
+│   └── utils.py
+│
 ├── tests/
-│   ├── test_removal.py         # Integration tests
-│   └── test_utils.py           # Unit tests for utility functions
+│   ├── test_removal.py
+│   └── test_utils.py
+│
 ├── requirements.txt
 └── README.md
-Installation
-Requires Python 3.8+
-bashgit clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
+```
+
+---
+
+## Installation
+
+### Requirements
+
+* Python 3.8+
+* OpenCV
+* NumPy
+* PyTest
+
+### Setup
+
+```bash
+git clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
+
 cd Visual-Artifact-Removal
+
 pip install -r requirements.txt
-Usage
-Remove a watermark
-bashpython src/remove_watermark.py input.jpg output.jpg
-Python API
-pythonfrom src.remove_watermark import remove_watermark
+```
 
-remove_watermark(input_path="input.jpg", output_path="output.jpg")
-Batch processing
-pythonfrom src.utils import batch_process
+---
 
-batch_process(input_dir="images/raw/", output_dir="images/cleaned/")
-Running Tests
-bashpytest tests/ -v
-All tests are written with pytest. The suite covers both unit-level utility functions and end-to-end removal pipelines.
-How It Works
+## Usage
 
-Preprocessing — The input image is normalized and converted to the appropriate color space using OpenCV.
-Mask Generation — Artifact regions (e.g., watermark pixels) are detected via thresholding or edge analysis.
-Inpainting — OpenCV's cv2.inpaint fills masked regions using the Navier-Stokes or Telea algorithm.
-Post-processing — Output is sharpened and saved in the original format.
+### Command Line
 
-Roadmap
+```bash
+python src/remove_watermark.py input.jpg output.jpg
+```
 
- Deep learning-based inpainting (e.g., LaMa, DeepFill)
- GUI interface for non-technical users
- Video artifact removal support
- Docker container for easy deployment
+### Python API
 
-Contributing
-Contributions are welcome. Please open an issue before submitting a pull request so we can discuss scope and approach.
-bash# Fork the repo, create your branch
-git checkout -b feature/your-feature-name
+```python
+from src.remove_watermark import remove_watermark
 
-# Make changes, run tests
+remove_watermark(
+    input_path="input.jpg",
+    output_path="output.jpg"
+)
+```
+
+### Batch Processing
+
+```python
+from src.utils import batch_process
+
+batch_process(
+    input_dir="images/raw/",
+    output_dir="images/cleaned/"
+)
+```
+
+---
+
+## Testing
+
+Run the complete test suite:
+
+```bash
+pytest tests/ -v
+```
+
+The project includes both unit tests and integration tests to validate image restoration workflows.
+
+---
+
+## Processing Pipeline
+
+### 1. Preprocessing
+
+Images are normalized and prepared for analysis using OpenCV.
+
+### 2. Artifact Detection
+
+Target regions are identified using thresholding, masking, and edge-based analysis techniques.
+
+### 3. Restoration
+
+Detected artifacts are repaired using OpenCV inpainting algorithms, including:
+
+* Telea Inpainting
+* Navier-Stokes Inpainting
+
+### 4. Post-Processing
+
+The restored image is refined and exported in its original format.
+
+---
+
+## Future Work
+
+* Deep-learning-based inpainting (LaMa, DeepFill)
+* Video restoration support
+* Interactive desktop GUI
+* Dockerized deployment
+* Automatic watermark localization
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+```bash
+git checkout -b feature/new-feature
+
 pytest tests/ -v
 
-# Open a pull request
-License
-MIT License. See LICENSE for details.
+git commit -m "Add new feature"
+```
+
+Please open an issue before submitting major changes.
+
+---
+
+## License
+
+Licensed under the MIT License.
+
+See the LICENSE file for details.
