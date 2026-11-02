@@ -1,0 +1,2 @@
+# Install alongside requirements.txt or requirements-dev.txt.
+streamlit>=1.39,<2

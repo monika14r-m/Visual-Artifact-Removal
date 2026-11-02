@@ -25,12 +25,14 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest -q
+      - name: Compile application and package
+        run: python -m compileall -q app.py src
       - name: Run CLI smoke test
         run: |
           python - <<'PY'
           import cv2
           import numpy as np
           image = np.zeros((64, 64, 3), dtype=np.uint8)
-          cv2.imwrite('/tmp/wav-test.png', image)
+          cv2.imwrite('/tmp/var-test.png', image)
           PY
-          python -m src.main /tmp/wav-test.png /tmp/wav-restored.png --operation denoise
+          python -m src.main /tmp/var-test.png /tmp/var-restored.png --operation denoise

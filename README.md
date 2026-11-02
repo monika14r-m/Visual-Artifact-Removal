@@ -1,174 +1,216 @@
 # Visual Artifact Removal
 
-A lightweight Python image-restoration toolkit for reducing common image noise and compression artifacts, repairing user-selected damaged regions, and evaluating restoration quality.
+A Python image-restoration toolkit with two processing paths: lightweight OpenCV filters and an optional ONNX deep-learning runtime. It includes a command-line interface, a Streamlit before/after workspace, mask-based repair, and ZIP batch export.
 
-The project uses classical computer-vision methods with OpenCV. It is designed for transparent, reproducible processing—not as a promise to perfectly reconstruct lost image information.
+The project is designed for reversible, transparent processing. It does not promise to reconstruct information that was never captured or has been destroyed.
 
 ## Features
 
-| Operation | Method | Best for |
+| Capability | Method | Notes |
 |---|---|---|
-| Denoise | Non-local means | Random sensor / scan noise |
-| Deblock | Bilateral filtering | Mild JPEG-like block and ringing artifacts |
-| Inpaint | Telea or Navier–Stokes | Small damaged regions selected with a mask |
+| Denoise | OpenCV non-local means | Reduces random scan and sensor noise |
+| Deblock | Bilateral filtering | Approximation for mild compression artifacts; may soften detail |
+| Classical inpaint | Telea / Navier–Stokes | Uses an explicit white-on-black repair mask |
 | Enhance | Unsharp masking | Mild edge/detail enhancement |
-| Evaluate | PSNR and SSIM | Comparing output against a clean reference |
-| Batch | Directory processing | Applying one operation to many images |
+| AI super-resolution | User-supplied ONNX model | Supports compatible one-input RGB image models |
+| AI inpainting | User-supplied ONNX model | Supports compatible LaMa-style image-plus-mask exports |
+| Quality metrics | PSNR and SSIM | Full-reference metrics when a clean image is available |
+| Batch | CLI and web UI | Directory processing or multi-upload ZIP export |
 
-Other features:
-- Grayscale, BGR and BGRA image support.
-- PNG, JPEG, BMP, TIFF and WebP inputs through OpenCV.
-- Explicit masks for inpainting; no automatic fixed-corner watermark guessing.
-- CLI and Python API.
-- Automated regression tests and GitHub Actions CI.
+Other features include grayscale/BGR/BGRA handling, PNG/JPEG/BMP/TIFF/WebP image I/O, alpha preservation, input validation, reproducible tests, and GitHub Actions CI.
 
-## Project structure
-
-\`\`\`text
-Visual-Artifact-Removal/
-├── src/
-│   ├── core/
-│   │   ├── image_loader.py
-│   │   ├── inpaint.py
-│   │   ├── remover.py
-│   │   └── utils.py
-│   ├── config.py
-│   ├── main.py
-│   ├── metrics.py
-│   └── removal_watermark.py
-├── tests/
-│   └── test_restoration.py
-├── requirements.txt
-├── requirements-dev.txt
-└── README.md
-\`\`\`
-
-## Installation
+## Install
 
 Python 3.10+ is recommended.
 
-### Windows PowerShell
-
-\`\`\`powershell
+~~~bash
 git clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
 cd Visual-Artifact-Removal
 python -m venv .venv
-.venv\\Scripts\\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements-dev.txt
-\`\`\`
+~~~
 
-### macOS / Linux
+Windows PowerShell:
 
-\`\`\`bash
-git clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
-cd Visual-Artifact-Removal
-python3 -m venv .venv
+~~~powershell
+.venv\Scripts\Activate.ps1
+~~~
+
+macOS / Linux:
+
+~~~bash
 source .venv/bin/activate
+~~~
+
+Install the core tools:
+
+~~~bash
 python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
-\`\`\`
+~~~
 
-## Quick start
+Optional features are installed separately:
 
-Denoise a single image:
+~~~bash
+# ONNX inference (CPU)
+pip install -r requirements-ai.txt
 
-\`\`\`bash
+# Browser interface
+pip install -r requirements-ui.txt
+~~~
+
+For NVIDIA GPU inference, use a compatible onnxruntime-gpu build and CUDA/cuDNN version for your system. The CLI can request the CUDA execution provider; CPU inference remains the default.
+
+## Browser interface
+
+Start the local workspace:
+
+~~~bash
+streamlit run app.py
+~~~
+
+The interface provides:
+- Single-image processing with before/after comparison and PNG download.
+- Mask upload for classical or AI inpainting.
+- Multiple-image processing with per-file status and ZIP download.
+- A model compatibility guide for ONNX inputs and outputs.
+
+The batch tab currently supports the three classical operations. AI model inference is available in the single-image tab and through the CLI.
+
+## CLI quick start
+
+Denoise an image:
+
+~~~bash
 python -m src.main input.jpg output.png --operation denoise --strength 7
-\`\`\`
+~~~
 
-Reduce compression artifacts:
+Reduce mild compression artifacts:
 
-\`\`\`bash
+~~~bash
 python -m src.main compressed.jpg restored.png --operation deblock --strength 5
-\`\`\`
+~~~
 
-Sharpen edges lightly:
+Sharpen lightly:
 
-\`\`\`bash
+~~~bash
 python -m src.main soft.png enhanced.png --operation enhance --strength 7
-\`\`\`
+~~~
 
-Repair a selected region using a mask:
+Repair an explicitly selected region:
 
-\`\`\`bash
+~~~bash
 python -m src.main damaged.png repaired.png --operation inpaint --mask mask.png --method telea --radius 3
-\`\`\`
+~~~
 
-In a mask image, white pixels mark the region to repair and black pixels preserve the original image. The mask must have the same height and width as the source image.
+Run a compatible ONNX super-resolution model:
+
+~~~bash
+pip install -r requirements-ai.txt
+python -m src.main low-resolution.png upscaled.png --operation ai-upscale --model models/upscaler.onnx
+~~~
+
+Run a LaMa-style two-input ONNX inpainting model:
+
+~~~bash
+python -m src.main damaged.png repaired.png --operation ai-inpaint --model models/lama.onnx --mask mask.png
+~~~
+
+Request CUDA inference when the matching runtime is installed:
+
+~~~bash
+python -m src.main input.png output.png --operation ai-upscale --model models/upscaler.onnx --device cuda
+~~~
 
 Batch process a directory:
 
-\`\`\`bash
+~~~bash
 python -m src.main --batch images/input images/output --operation denoise --strength 6 --recursive
-\`\`\`
+~~~
 
 Evaluate against a clean reference:
 
-\`\`\`bash
+~~~bash
 python -m src.main noisy.png restored.png --operation denoise --reference clean.png
-\`\`\`
+~~~
 
-The CLI prints PSNR and SSIM when a reference image is supplied. The reference and restored output must have identical dimensions.
+PSNR and SSIM are only meaningful when the reference and output have matching dimensions and alignment.
 
-## Python API
+## ONNX model compatibility
 
-\`\`\`python
+Model weights are not committed to this repository. They can be large, have separate licenses, and require model-specific preprocessing. The adapter intentionally supports a clear contract rather than claiming compatibility with every ONNX graph.
+
+### Super-resolution / image restoration
+
+The model must expose:
+- Exactly one rank-4 image input and at least one output.
+- Three RGB channels in NCHW or NHWC layout.
+- Float32 input values normalized to [0, 1].
+- Output image values in [0, 1], [-1, 1], or [0, 255].
+- Dynamic spatial dimensions are recommended. Fixed dimensions are accepted only when the uploaded image matches them.
+
+This can work with Real-ESRGAN-style ONNX exports when their exported tensor contract matches these requirements. Some exports use tiling, normalization, padding, or custom preprocessing and will need an adapter before they are compatible.
+
+### LaMa-style inpainting
+
+The model must expose exactly two rank-4 inputs: a three-channel RGB image and a one-channel mask. The mask input name should contain the word mask; otherwise the second input is treated as the mask. Both inputs use float32 values in [0, 1]. White mask pixels identify the area to reconstruct. The model output must match the input image dimensions.
+
+Some LaMa exports have additional preprocessing, padding, or mask conventions. Check the model export details before use; matching the input names and dimensions alone does not prove equivalent results.
+
+### Python API
+
+~~~python
 import cv2
+from src.ai.onnx_restorer import ONNXRestorer
 
-from src.core.image_loader import load_image, save_image
-from src.core.remover import denoise_image, inpaint_image
-
-image = load_image("input.jpg")
-restored = denoise_image(image, strength=7)
-save_image(restored, "output.png")
+image = cv2.imread("input.png")
+upscaler = ONNXRestorer("models/upscaler.onnx", task="upscale")
+upscaled = upscaler.upscale(image)
+cv2.imwrite("upscaled.png", upscaled)
 
 mask = cv2.imread("mask.png", cv2.IMREAD_GRAYSCALE)
-repaired = inpaint_image(image, mask, method="telea", radius=3)
-save_image(repaired, "repaired.png")
-\`\`\`
+inpainter = ONNXRestorer("models/lama.onnx", task="inpaint")
+repaired = inpainter.inpaint(image, mask)
+cv2.imwrite("repaired.png", repaired)
+~~~
 
-For a quality comparison:
+For a model whose output range cannot be inferred safely, pass output_range="zero_one", "minus_one_one", or "zero_255" to ONNXRestorer.
 
-\`\`\`python
-from src.metrics import compare_quality
-
-clean = load_image("clean_reference.png")
-print(compare_quality(clean, restored))
-\`\`\`
+Only load model files from sources you trust. Model files are external inference inputs and can consume substantial memory or compute.
 
 ## Parameters and practical guidance
 
 - Denoise strength: 0–30. Start around 5–8; higher values can erase texture.
 - Deblock strength: 0–10. Start around 3–5; bilateral filtering can soften fine details.
 - Inpainting radius: greater than 0 and at most 20. Small masks generally work better with smaller radii.
-- Enhance strength: 0–20 on the CLI, mapped to a restrained unsharp-mask amount. Excessive sharpening amplifies noise and halos.
+- Enhance strength on the CLI: 0–20 mapped to a restrained unsharp-mask amount.
 
-Always compare the output with the original. Keep the original file so restoration remains reversible.
+Keep the original file and compare every result. AI model quality depends on its training data, preprocessing, input size, and export settings.
 
 ## Quality metrics
 
-- **PSNR** measures pixel-level reconstruction error. Higher is better when a true clean reference is available.
-- **SSIM** measures structural similarity. Values closer to 1 indicate greater similarity.
+- **PSNR** measures pixel-level reconstruction error. Higher is generally better when comparing against a true clean reference.
+- **SSIM** measures structural similarity. Values closer to 1 indicate greater structural similarity.
 
-These are full-reference metrics; they cannot determine whether an output looks better when no clean reference exists.
+These are full-reference metrics. They cannot determine whether an output looks better when no clean reference exists, and they should not be used to compare images with different dimensions or alignment.
 
 ## Tests
 
-\`\`\`bash
+~~~bash
 pytest -q
-\`\`\`
+~~~
 
-Tests create synthetic images and cover file I/O, denoising, alpha-channel preservation, inpainting, parameter validation, resizing, and quality metrics. No sample image downloads are required.
+Tests use synthetic images and fake ONNX sessions, so no model download or GPU is required for the test suite. GitHub Actions also runs a CLI smoke test and checks Python compilation for the web app.
 
 ## Limitations
 
 - Classical filters cannot recover detail that has been completely destroyed by compression or blur.
 - Deblocking is an edge-preserving smoothing approximation, not a learned JPEG restoration model.
-- Inpainting quality depends on the mask and surrounding context; large masked regions may produce visible artifacts.
-- Automatic watermark localization is intentionally not enabled. Supply a mask for regions you have the right to edit.
-- This package does not currently provide deep-learning restoration, video processing, face restoration, or a GUI.
+- Classical inpainting quality depends on mask size and surrounding context.
+- ONNX inference only supports the documented tensor contracts. It is not a universal ONNX model runner.
+- Pretrained model weights are not bundled. The app does not automatically download or verify third-party weights.
+- The browser batch queue currently runs classical operations; AI operations are available for individual images and via CLI.
+- No video restoration or face-specific restoration is included.
 
 ## License
 
-MIT. See the repository license file.
+MIT. See the repository license file. Third-party ONNX model weights remain subject to their own licenses.
