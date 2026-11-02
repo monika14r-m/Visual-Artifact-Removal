@@ -1,172 +1,174 @@
 # Visual Artifact Removal
 
-A Python-based image restoration toolkit for removing watermarks, reducing compression artifacts, and repairing minor visual defects using OpenCV and classical computer vision techniques.
+A lightweight Python image-restoration toolkit for reducing common image noise and compression artifacts, repairing user-selected damaged regions, and evaluating restoration quality.
 
----
+The project uses classical computer-vision methods with OpenCV. It is designed for transparent, reproducible processing—not as a promise to perfectly reconstruct lost image information.
 
-## Overview
+## Features
 
-Visual Artifact Removal is a lightweight image-processing project that demonstrates practical applications of image restoration techniques using OpenCV.
+| Operation | Method | Best for |
+|---|---|---|
+| Denoise | Non-local means | Random sensor / scan noise |
+| Deblock | Bilateral filtering | Mild JPEG-like block and ringing artifacts |
+| Inpaint | Telea or Navier–Stokes | Small damaged regions selected with a mask |
+| Enhance | Unsharp masking | Mild edge/detail enhancement |
+| Evaluate | PSNR and SSIM | Comparing output against a clean reference |
+| Batch | Directory processing | Applying one operation to many images |
 
-The toolkit provides a modular pipeline for detecting and repairing common visual artifacts while remaining easy to understand, extend, and integrate into larger computer vision workflows.
+Other features:
+- Grayscale, BGR and BGRA image support.
+- PNG, JPEG, BMP, TIFF and WebP inputs through OpenCV.
+- Explicit masks for inpainting; no automatic fixed-corner watermark guessing.
+- CLI and Python API.
+- Automated regression tests and GitHub Actions CI.
 
-### Supported Operations
+## Project structure
 
-| Artifact              | Technique                 |
-| --------------------- | ------------------------- |
-| Watermarks            | Mask-based inpainting     |
-| Compression Artifacts | Bilateral filtering       |
-| Minor Defects         | Morphological restoration |
-
----
-
-## Key Features
-
-* Watermark removal using OpenCV inpainting
-* Compression artifact reduction
-* Morphological image restoration
-* Batch image processing support
-* Modular and extensible architecture
-* Automated testing with PyTest
-* Simple Python API and CLI usage
-
----
-
-## Project Structure
-
-```text
+\`\`\`text
 Visual-Artifact-Removal/
 ├── src/
-│   ├── remove_watermark.py
-│   ├── artifact_filter.py
-│   └── utils.py
-│
+│   ├── core/
+│   │   ├── image_loader.py
+│   │   ├── inpaint.py
+│   │   ├── remover.py
+│   │   └── utils.py
+│   ├── config.py
+│   ├── main.py
+│   ├── metrics.py
+│   └── removal_watermark.py
 ├── tests/
-│   ├── test_removal.py
-│   └── test_utils.py
-│
+│   └── test_restoration.py
 ├── requirements.txt
+├── requirements-dev.txt
 └── README.md
-```
-
----
+\`\`\`
 
 ## Installation
 
-### Requirements
+Python 3.10+ is recommended.
 
-* Python 3.8+
-* OpenCV
-* NumPy
-* PyTest
+### Windows PowerShell
 
-### Setup
-
-```bash
+\`\`\`powershell
 git clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
-
 cd Visual-Artifact-Removal
+python -m venv .venv
+.venv\\Scripts\\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements-dev.txt
+\`\`\`
 
-pip install -r requirements.txt
-```
+### macOS / Linux
 
----
+\`\`\`bash
+git clone https://github.com/monika14r-m/Visual-Artifact-Removal.git
+cd Visual-Artifact-Removal
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements-dev.txt
+\`\`\`
 
-## Usage
+## Quick start
 
-### Command Line
+Denoise a single image:
 
-```bash
-python src/remove_watermark.py input.jpg output.jpg
-```
+\`\`\`bash
+python -m src.main input.jpg output.png --operation denoise --strength 7
+\`\`\`
 
-### Python API
+Reduce compression artifacts:
 
-```python
-from src.remove_watermark import remove_watermark
+\`\`\`bash
+python -m src.main compressed.jpg restored.png --operation deblock --strength 5
+\`\`\`
 
-remove_watermark(
-    input_path="input.jpg",
-    output_path="output.jpg"
-)
-```
+Sharpen edges lightly:
 
-### Batch Processing
+\`\`\`bash
+python -m src.main soft.png enhanced.png --operation enhance --strength 7
+\`\`\`
 
-```python
-from src.utils import batch_process
+Repair a selected region using a mask:
 
-batch_process(
-    input_dir="images/raw/",
-    output_dir="images/cleaned/"
-)
-```
+\`\`\`bash
+python -m src.main damaged.png repaired.png --operation inpaint --mask mask.png --method telea --radius 3
+\`\`\`
 
----
+In a mask image, white pixels mark the region to repair and black pixels preserve the original image. The mask must have the same height and width as the source image.
 
-## Testing
+Batch process a directory:
 
-Run the complete test suite:
+\`\`\`bash
+python -m src.main --batch images/input images/output --operation denoise --strength 6 --recursive
+\`\`\`
 
-```bash
-pytest tests/ -v
-```
+Evaluate against a clean reference:
 
-The project includes both unit tests and integration tests to validate image restoration workflows.
+\`\`\`bash
+python -m src.main noisy.png restored.png --operation denoise --reference clean.png
+\`\`\`
 
----
+The CLI prints PSNR and SSIM when a reference image is supplied. The reference and restored output must have identical dimensions.
 
-## Processing Pipeline
+## Python API
 
-### 1. Preprocessing
+\`\`\`python
+import cv2
 
-Images are normalized and prepared for analysis using OpenCV.
+from src.core.image_loader import load_image, save_image
+from src.core.remover import denoise_image, inpaint_image
 
-### 2. Artifact Detection
+image = load_image("input.jpg")
+restored = denoise_image(image, strength=7)
+save_image(restored, "output.png")
 
-Target regions are identified using thresholding, masking, and edge-based analysis techniques.
+mask = cv2.imread("mask.png", cv2.IMREAD_GRAYSCALE)
+repaired = inpaint_image(image, mask, method="telea", radius=3)
+save_image(repaired, "repaired.png")
+\`\`\`
 
-### 3. Restoration
+For a quality comparison:
 
-Detected artifacts are repaired using OpenCV inpainting algorithms, including:
+\`\`\`python
+from src.metrics import compare_quality
 
-* Telea Inpainting
-* Navier-Stokes Inpainting
+clean = load_image("clean_reference.png")
+print(compare_quality(clean, restored))
+\`\`\`
 
-### 4. Post-Processing
+## Parameters and practical guidance
 
-The restored image is refined and exported in its original format.
+- Denoise strength: 0–30. Start around 5–8; higher values can erase texture.
+- Deblock strength: 0–10. Start around 3–5; bilateral filtering can soften fine details.
+- Inpainting radius: greater than 0 and at most 20. Small masks generally work better with smaller radii.
+- Enhance strength: 0–20 on the CLI, mapped to a restrained unsharp-mask amount. Excessive sharpening amplifies noise and halos.
 
----
+Always compare the output with the original. Keep the original file so restoration remains reversible.
 
-## Future Work
+## Quality metrics
 
-* Deep-learning-based inpainting (LaMa, DeepFill)
-* Video restoration support
-* Interactive desktop GUI
-* Dockerized deployment
-* Automatic watermark localization
+- **PSNR** measures pixel-level reconstruction error. Higher is better when a true clean reference is available.
+- **SSIM** measures structural similarity. Values closer to 1 indicate greater similarity.
 
----
+These are full-reference metrics; they cannot determine whether an output looks better when no clean reference exists.
 
-## Contributing
+## Tests
 
-Contributions are welcome.
+\`\`\`bash
+pytest -q
+\`\`\`
 
-```bash
-git checkout -b feature/new-feature
+Tests create synthetic images and cover file I/O, denoising, alpha-channel preservation, inpainting, parameter validation, resizing, and quality metrics. No sample image downloads are required.
 
-pytest tests/ -v
+## Limitations
 
-git commit -m "Add new feature"
-```
-
-Please open an issue before submitting major changes.
-
----
+- Classical filters cannot recover detail that has been completely destroyed by compression or blur.
+- Deblocking is an edge-preserving smoothing approximation, not a learned JPEG restoration model.
+- Inpainting quality depends on the mask and surrounding context; large masked regions may produce visible artifacts.
+- Automatic watermark localization is intentionally not enabled. Supply a mask for regions you have the right to edit.
+- This package does not currently provide deep-learning restoration, video processing, face restoration, or a GUI.
 
 ## License
 
-Licensed under the MIT License.
-
-See the LICENSE file for details.
+MIT. See the repository license file.

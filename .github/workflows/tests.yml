@@ -1,0 +1,36 @@
+name: Image restoration tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest -q
+      - name: Run CLI smoke test
+        run: |
+          python - <<'PY'
+          import cv2
+          import numpy as np
+          image = np.zeros((64, 64, 3), dtype=np.uint8)
+          cv2.imwrite('/tmp/wav-test.png', image)
+          PY
+          python -m src.main /tmp/wav-test.png /tmp/wav-restored.png --operation denoise

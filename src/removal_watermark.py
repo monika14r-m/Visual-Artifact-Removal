@@ -1,68 +1,34 @@
-"""
-removal_watermark.py
---------------------
-Provides functions to remove watermarks from images using OpenCV inpainting.
-Includes a CLI entry point for direct usage.
-"""
+"""Backwards-compatible command wrapper for mask-based inpainting."""
+from __future__ import annotations
+
+import argparse
 
 import cv2
-import numpy as np
-import argparse
-import os
+
+from src.core.image_loader import load_image, save_image
+from src.core.remover import remove_watermark
 
 
-def remove_watermark(image_path, output_path, mask=None):
-    """
-    Removes watermark from an image using inpainting.
-
-    Parameters
-    ----------
-    image_path : str
-        Path to input image.
-    output_path : str
-        Path to save output image.
-    mask : np.ndarray, optional
-        Binary mask (same size as image) where watermark is marked.
-        If None, a default heuristic mask is applied.
-
-    Returns
-    -------
-    str
-        Path to the saved output image.
-    """
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError(f"Could not load image: {image_path}")
-
-    if mask is not None and mask.shape != image.shape[:2]:
-        raise ValueError("Mask must match image dimensions")
-
+def remove_watermark_file(image_path, output_path, mask_path=None, method="telea", radius=3.0):
+    if not mask_path:
+        raise ValueError("A mask image is required. Create a white-on-black mask for the artifact to repair.")
+    image = load_image(image_path)
+    mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
     if mask is None:
-        # Simple heuristic: assume watermark is in bottom-right corner
-        mask = np.zeros(image.shape[:2], dtype=np.uint8)
-        h, w = image.shape[:2]
-        mask[h-80:h-20, w-200:w-20] = 255
-
-    result = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
-    cv2.imwrite(output_path, result)
-    return output_path
+        raise ValueError(f"Could not load mask: {mask_path}")
+    result = remove_watermark(image, mask=mask, method=method, radius=radius)
+    return save_image(result, output_path)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Remove watermark from image")
-    parser.add_argument("input", help="Path to input image")
-    parser.add_argument("output", help="Path to save cleaned image")
-    parser.add_argument("--mask", help="Optional path to mask image", default=None)
+    parser = argparse.ArgumentParser(description="Repair a user-specified image region with mask-based inpainting.")
+    parser.add_argument("input")
+    parser.add_argument("output")
+    parser.add_argument("--mask", required=True, help="Grayscale mask; white pixels are repaired")
+    parser.add_argument("--method", choices=["telea", "ns"], default="telea")
+    parser.add_argument("--radius", type=float, default=3.0)
     args = parser.parse_args()
-
-    mask = None
-    if args.mask:
-        mask = cv2.imread(args.mask, cv2.IMREAD_GRAYSCALE)
-        if mask is None:
-            raise ValueError(f"Could not load mask: {args.mask}")
-
-    out_path = remove_watermark(args.input, args.output, mask)
-    print(f"Watermark removed. Saved output to {out_path}")
+    print(remove_watermark_file(args.input, args.output, args.mask, args.method, args.radius))
 
 
 if __name__ == "__main__":

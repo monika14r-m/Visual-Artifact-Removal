@@ -1,0 +1,1 @@
+"""Visual Artifact Removal image restoration toolkit."""

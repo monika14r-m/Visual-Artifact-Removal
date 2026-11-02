@@ -1,64 +1,32 @@
-# tests/test_utils.py
+"""Small filesystem and image utility helpers."""
+from __future__ import annotations
 
-import os
+from pathlib import Path
+
+import cv2
 import numpy as np
-import pytest
 
-from src.core.utils import (
-    is_image_file,
-    list_images,
-    resize_image
-)
+from src.core.image_loader import validate_image
+
+DEFAULT_FORMATS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp")
 
 
-def test_is_image_file_valid():
-    assert is_image_file(
-        "photo.jpg",
-        (".jpg", ".jpeg", ".png")
-    )
+def is_image_file(filename, formats=DEFAULT_FORMATS) -> bool:
+    return Path(filename).suffix.lower() in {ext.lower() for ext in formats}
 
 
-def test_is_image_file_invalid():
-    assert not is_image_file(
-        "document.txt",
-        (".jpg", ".jpeg", ".png")
-    )
+def list_images(directory, formats=DEFAULT_FORMATS, recursive: bool = False):
+    folder = Path(directory).expanduser()
+    if not folder.is_dir():
+        raise FileNotFoundError(f"Image directory not found: {folder}")
+    iterator = folder.rglob("*") if recursive else folder.iterdir()
+    return sorted(str(path) for path in iterator if path.is_file() and is_image_file(path.name, formats))
 
 
-def test_list_images_returns_only_images(tmp_path):
-    (tmp_path / "image1.jpg").touch()
-    (tmp_path / "image2.png").touch()
-    (tmp_path / "notes.txt").touch()
-
-    images = list_images(
-        str(tmp_path),
-        (".jpg", ".jpeg", ".png")
-    )
-
-    assert len(images) == 2
-
-
-def test_list_images_folder_not_found():
-    with pytest.raises(FileNotFoundError):
-        list_images(
-            "nonexistent_folder",
-            (".jpg", ".jpeg", ".png")
-        )
-
-
-def test_resize_image_changes_width():
-    image = np.zeros((100, 200, 3), dtype=np.uint8)
-
-    resized = resize_image(image, 100)
-
-    assert resized.shape[1] == 100
-
-
-def test_resize_image_preserves_aspect_ratio():
-    image = np.zeros((100, 200, 3), dtype=np.uint8)
-
-    resized = resize_image(image, 100)
-
-    expected_height = 50
-
-    assert resized.shape[0] == expected_height
+def resize_image(image, width: int):
+    image = validate_image(image)
+    if not isinstance(width, int) or width <= 0:
+        raise ValueError("width must be a positive integer")
+    height = max(1, int(round(image.shape[0] * width / image.shape[1])))
+    interpolation = cv2.INTER_AREA if width < image.shape[1] else cv2.INTER_CUBIC
+    return cv2.resize(image, (width, height), interpolation=interpolation)

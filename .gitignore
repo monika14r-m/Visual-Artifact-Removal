@@ -1,23 +1,14 @@
-# Python cache
 __pycache__/
-*.pyc
-*.pyo
-
-# Virtual environments
+*.py[cod]
+.pytest_cache/
+.venv/
 venv/
-.env/
-
-# OS files
+.env
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
-
-# Large files
-*.jpg
-*.png
-*.jpeg
-*.bmp
-*.tiff
-*.gif
-
-# Notebook checkpoints
-.ipynb_checkpoints/
+# Local image datasets and generated results
+data/input/
+data/output/
+results/
