@@ -18,9 +18,26 @@ from src.core.remover import restore_image
 
 
 IMAGE_TYPES = ["png", "jpg", "jpeg", "bmp", "tif", "tiff", "webp"]
+MAX_IMAGE_BYTES = 25 * 1024 * 1024
+
+
+def unique_archive_name(filename: str, used_names: set[str]) -> str:
+    """Return a collision-free ZIP entry name for restored images."""
+    stem = Path(filename).stem or "image"
+    candidate = f"{stem}-restored.png"
+    index = 2
+    while candidate.casefold() in used_names:
+        candidate = f"{stem}-restored-{index}.png"
+        index += 1
+    used_names.add(candidate.casefold())
+    return candidate
 
 
 def decode_image(data: bytes, grayscale: bool = False):
+    if len(data) > MAX_IMAGE_BYTES:
+        raise ValueError("Images must be 25 MB or smaller.")
+    if not data:
+        raise ValueError("The uploaded image is empty.")
     flag = cv2.IMREAD_GRAYSCALE if grayscale else cv2.IMREAD_UNCHANGED
     image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), flag)
     if image is None:
@@ -172,6 +189,7 @@ with batch_tab:
     if run_batch:
         output_zip = io.BytesIO()
         rows = []
+        used_archive_names = set()
         with zipfile.ZipFile(output_zip, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for uploaded_file in batch_files:
                 try:
@@ -183,7 +201,7 @@ with batch_tab:
                     }[batch_operation]
                     result = process_classical(source, key, batch_strength)
                     archive.writestr(
-                        Path(uploaded_file.name).stem + "-restored.png", encode_png(result)
+                        unique_archive_name(uploaded_file.name, used_archive_names), encode_png(result)
                     )
                     rows.append({
                         "file": uploaded_file.name,
